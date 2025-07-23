@@ -1,6 +1,6 @@
 # DCFurs Badge Firmware
 
-This directory contains board support and firmware for the 2024 DCFurs badge, to
+This directory contains board support and firmware for the 2025 DCFurs badge, to
 be built using Micropython. The build instructions should roughly follow the
 [RP2](https://github.com/micropython/micropython/tree/master/ports/rp2) port as
 follows:
@@ -39,11 +39,11 @@ From the `ports/rp2` directory in the micropython project, we can build the
 badge firmware by specifying the path to the DCFurs board support directory:
 
 ```
-make BOARD_DIR=~/path/to/dcfurs-badge-dc32/board/DCF2024_BADGE
+make BOARD_DIR=~/path/to/dcfurs-badge-dc32/board/DCF2025_BADGE
 ```
 
 Once the build has finished, you should be able to find the compiled firmware
-in the `ports/rp2/build-DCF2024_BADGE` directory of the micropython project.
+in the `ports/rp2/build-DCF2025_BADGE` directory of the micropython project.
 
 ### Programming the Badge
 
