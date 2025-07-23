@@ -1,0 +1,18 @@
+{
+    "deploy": [
+        "../deploy.md"
+    ],
+    "docs": "",
+    "features": [
+        "Dual-core",
+        "External Flash",
+        "Secure Element",
+        "USB"
+    ],
+    "images": [],
+    "mcu": "rp2040",
+    "product": "DCF2025-Badge",
+    "thumbnail": "",
+    "url": "n/a",
+    "vendor": "DEFCON Furs"
+}

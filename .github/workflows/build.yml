@@ -49,10 +49,10 @@ jobs:
       - name: Build firmware
         shell: bash
         working-directory: micropython/ports/rp2
-        run: make BOARD_DIR=${{ github.workspace }}/board/DCF2024_BADGE
+        run: make BOARD_DIR=${{ github.workspace }}/board/DCF2025_BADGE
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Badge Firmware
-          path: micropython/ports/rp2/build-DCF2024_BADGE/firmware.uf2
+          path: micropython/ports/rp2/build-DCF2025_BADGE/firmware.uf2
