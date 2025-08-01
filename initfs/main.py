@@ -64,10 +64,14 @@ class badge(object):
     def __init__(self):
         self.disp = is31fl3737()
         self.touch = TouchController((4,5,6,7))
-        self.touch.channels[0].level_lo = 15000
-        self.touch.channels[0].level_hi = 20000
-        self.touch.channels[1].level_lo = 15000
-        self.touch.channels[1].level_hi = 20000
+        self.touch.channels[0].level_lo = 15000 # eye
+        self.touch.channels[0].level_hi = 42000
+        self.touch.channels[1].level_lo = 10000 # brows
+        self.touch.channels[1].level_hi = 25000
+        self.touch.channels[2].level_lo = 10000 # nose
+        self.touch.channels[2].level_hi = 38000
+        self.touch.channels[3].level_lo = 10000 # teeth
+        self.touch.channels[3].level_hi = 34000
         self.half_bright = False
         self.blush_count = 0
         self.blush_mix = 0.5
@@ -94,35 +98,38 @@ class badge(object):
         self.pallet = [array.array("f", [0.0,0.0,0.0]) for i in range(1024)]
         self.pallet_functions[self.pallet_index](self.pallet)
 
-        print("Oh what a day. WHAT A LOVELY DAY!")
+        print("Hack the Monarchy!")
         self.timer = Timer(mode=Timer.PERIODIC, freq=15, callback=self.isr_update)
 
     def next(self, seek=1):
         """Seek to the next animation"""
         self.disp.clear()
-        self.animation_index = (self.animation_index + seek) % len(self.animation_list)
+        self.animation_index = (self.animation_index + seek)
+        if self.animation_index >= len(self.animation_list): self.animation_index = 0
+        if self.animation_index < 0: self.animation_index = len(self.animation_list)-1
         self.animation_current = self.animation_list[self.animation_index](self)
         print(f"Playing animation: {self.animation_current.__qualname__}")
 
     def blush(self, mix):
-        if mix > 1.0: mix = 1.0
-        if mix < 0.0: mix = 0.0
-        for i in range(len(self.disp.cheeks)):
-            self.disp.cheeks[i].r = (self.disp.cheeks[i].r * (1-mix)) + (mix * 255)
-            self.disp.cheeks[i].g = (self.disp.cheeks[i].g * (1-mix)) + (mix * 10)
-            self.disp.cheeks[i].b = (self.disp.cheeks[i].b * (1-mix)) + (mix * 10)
+        pass
+        # if mix > 1.0: mix = 1.0
+        # if mix < 0.0: mix = 0.0
+        # for i in range(len(self.disp.cheeks)):
+        #     self.disp.cheeks[i].r = (self.disp.cheeks[i].r * (1-mix)) + (mix * 255)
+        #     self.disp.cheeks[i].g = (self.disp.cheeks[i].g * (1-mix)) + (mix * 10)
+        #     self.disp.cheeks[i].b = (self.disp.cheeks[i].b * (1-mix)) + (mix * 10)
 
     def isr_update(self,*args):
         schedule(self.update, self)
 
     def update(self,*args):
         self.touch.update()
-        if (self.touch.channels[0].level > 0.3) or (self.touch.channels[1].level > 0.3):
+        if (self.touch.channels[3].level > 0.3):
             # Invoke the animation's boop method, if present.
-            if (hasattr(self.animation_current, "boop") and
-                callable(self.animation_current.boop) and
-                self.blush_count < 50):
-                self.animation_current.boop()
+            # if (hasattr(self.animation_current, "boop") and
+            #     callable(self.animation_current.boop) and
+            #     self.blush_count < 50):
+            #     self.animation_current.boop()
 
             # Start blushing
             self.blush_count = 50
@@ -156,23 +163,26 @@ class badge(object):
                     self.pallet_index = 0
                 self.pallet_functions[self.pallet_index](self.pallet)
             else:
-                self.next(-1)
+                if (hasattr(self.animation_current, "button") and callable(self.animation_current.button)):
+                    self.animation_current.button()
+                else:
+                    self.next(-1)
 
         self.sw4_last = self.sw4_count
         self.sw5_last = self.sw5_count
 
         if self.half_bright: self.disp.brightness = 50
-        else:                self.disp.brightness = 255                
+        else:                self.disp.brightness = 255
 
         self.animation_current.update()
 
-        # Mix the blush effect into the cheeks - then restore the state of the
-        # cheeks when we're done so we don't interfere with any animation state
-        backup = [rgb_value(i.r, i.g, i.b) for i in self.disp.cheeks]
-        self.blush(self.blush_mix)
+        # # Mix the blush effect into the cheeks - then restore the state of the
+        # # cheeks when we're done so we don't interfere with any animation state
+        # backup = [rgb_value(i.r, i.g, i.b) for i in self.disp.cheeks]
+        # self.blush(self.blush_mix)
         self.disp.update()
-        for i in range(len(backup)):
-            self.disp.cheeks[i].copy(backup[i])
+        # for i in range(len(backup)):
+        #     self.disp.cheeks[i].copy(backup[i])
 
         gc.collect()
 

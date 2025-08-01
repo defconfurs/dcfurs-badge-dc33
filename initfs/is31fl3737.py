@@ -117,23 +117,34 @@ class is31fl3737(object):
     REG_CSPDR = const(0x0310) # CSx Pull-Down Resistor selection register. Write only.
     REG_RESET = const(0x0311) # Reset register. Read only.
 
-    leds        = [rgb_value() for i in range(49)]
-    left_ear    = [leds[12],leds[11],leds[10],leds[9],leds[8],leds[7]]
-    right_ear   = [leds[6],leds[5],leds[4],leds[3],leds[2],leds[1]]
-    left_tuft   = [leds[23],leds[24],leds[21],leds[22],leds[20]]
-    right_tuft  = [leds[37],leds[38],leds[40],leds[39],leds[41]]
-    left_cheek  = [leds[16],leds[15],leds[14],leds[13]]
-    right_cheek = [leds[45],leds[46],leds[47],leds[48]]
-    cheeks      = left_cheek + right_cheek
-    nose        = [leds[36],leds[25],leds[35],leds[26],leds[34],leds[27],leds[33],leds[28],leds[32],leds[29],leds[31],leds[30]]
-    left_eye    = [leds[18],leds[19],leds[17]]
-    right_eye   = [leds[43],leds[42],leds[44]]
-
-    clockwise   = right_ear + right_tuft + right_cheek + [leds[30],leds[31]] +  [i for i in reversed(left_ear + left_tuft + left_cheek)]
-    downward = [leds[12],leds[6],leds[11],leds[5],leds[10],leds[4],leds[9],leds[3],leds[8],leds[2],leds[7],leds[1],
-                leds[23],leds[37],leds[24],leds[38],leds[18],leds[43],leds[17],leds[44],leds[21],leds[40],leds[22],leds[39],leds[19],leds[42],leds[20],leds[41],
-                leds[36],leds[25],leds[35],leds[26],leds[34],leds[27],leds[16],leds[45],leds[15],leds[46],leds[14],leds[47],leds[13],leds[48],leds[33],leds[28],
-                leds[32],leds[29],leds[31],leds[30]]
+    leds        = [rgb_value() for i in range(50)]
+    left_eye    = []
+    right_eye   = [leds[ 1],
+                   leds[25], leds[13],
+                   leds[38], leds[26], leds[14], leds[ 2],
+                   leds[39], leds[27], leds[15], leds[ 3],
+                   leds[40], leds[28], leds[16], leds[ 4], leds[37],
+                   leds[41], leds[29], leds[17], leds[ 5], leds[ 6],
+                   leds[30], leds[18], leds[42]]
+    eye_grid    = [[leds[ 0], leds[ 0], leds[ 1], leds[ 0], leds[ 0]], # note: sideways so it's [x][y]
+                   [leds[ 0], leds[25], leds[13], leds[ 0], leds[ 0]], # note 2: all '0's do not show
+                   [leds[38], leds[26], leds[14], leds[ 2], leds[ 0]],
+                   [leds[39], leds[27], leds[15], leds[ 3], leds[ 0]],
+                   [leds[40], leds[28], leds[16], leds[ 4], leds[37]],
+                   [leds[41], leds[29], leds[17], leds[ 5], leds[ 6]],
+                   [leds[ 0], leds[30], leds[18], leds[ 0], leds[42]]]
+    chin        = [leds[7],leds[8],leds[9],leds[10],leds[11],leds[12],leds[19],leds[20],leds[21],leds[22],leds[23],leds[24]]
+    clockwise   = [leds[1],leds[2], leds[37], leds[6], leds[42], leds[3], leds[4], leds[5], leds[13], leds[14], leds[15],
+                   leds[16],leds[17],leds[18],leds[30],leds[29],leds[28],leds[27],leds[26],leds[25],
+                   leds[41],leds[40],leds[39],leds[38],
+                   leds[24],leds[23],leds[22],leds[21],leds[20],leds[19],leds[12],leds[11],leds[10],leds[9],leds[8],leds[7]]
+    downward    = [leds[42],leds[6],leds[37],
+                   leds[2],leds[3],leds[4],leds[5],
+                   leds[13],leds[14],leds[15],leds[16],leds[17],leds[18],
+                   leds[1],
+                   leds[25],leds[26],leds[27],leds[28],leds[29],leds[30],
+                   leds[38],leds[39],leds[40],leds[41],
+                   leds[24],leds[23],leds[22],leds[21],leds[20],leds[19],leds[7],leds[8],leds[10],leds[9],leds[12],leds[11]]
 
     def __init__(self):
         self.i2c = I2C(0, scl=Pin(1), sda=Pin(0))
@@ -160,7 +171,7 @@ class is31fl3737(object):
     def write_paged_reg(self, addr, value):
         self.set_page(addr>>8)
         self.i2c.writeto_mem(self.I2C_ADDR, addr&0xFF, bytes([value & 0xFF]))
-
+    
     def init(self):
         # Read reset register to reset device.
         self.read_paged_reg(self.REG_RESET)
@@ -199,4 +210,3 @@ class is31fl3737(object):
         for i in range(49):
             self.leds[i].set(0, 0, 0)
         self.update()
-    
