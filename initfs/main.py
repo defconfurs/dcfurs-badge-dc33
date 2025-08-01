@@ -1,4 +1,5 @@
 from machine import Timer, Pin
+import machine
 from micropython import schedule
 import math
 import time
@@ -9,6 +10,8 @@ import gc
 import animations
 
 from is31fl3737 import is31fl3737, rgb_value
+
+machine.freq(240000000)
 
 def pallet_rainbow(target):
     for i in range(len(target)):
@@ -72,9 +75,12 @@ class badge(object):
         self.touch.channels[2].level_hi = 38000
         self.touch.channels[3].level_lo = 10000 # teeth
         self.touch.channels[3].level_hi = 34000
+        self.boop_level = 0.0
+        self.last_boop_level = 0.0
         self.half_bright = False
-        self.blush_count = 0
-        self.blush_mix = 0.5
+        self.boop_count = 0
+        self.boop_mix = 0.5
+        self.boop_offset = -8
         self.pallet_index = 0
         self.pallet_functions = [pallet_rainbow, pallet_blue, pallet_red, pallet_green, pallet_purple]
 
@@ -98,8 +104,15 @@ class badge(object):
         self.pallet = [array.array("f", [0.0,0.0,0.0]) for i in range(1024)]
         self.pallet_functions[self.pallet_index](self.pallet)
 
+        #                  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17
+        self.boop_img = (  0,  0,171,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,182,163, 30,  0,
+                           0,  0,183,174, 30,  0, 30,175, 30,  0, 30,175, 30,  0,168,  0,159,  0,
+                           0,  0,171,  0,159,  0,171,  0,171,  0,171,  0,171,  0,173,159, 30,  0,
+                           0,  0,172,157, 30,  0, 30,154, 30,  0, 30,154, 30,  0,182, 10,  0,  0,)
+
+
         print("Hack the Monarchy!")
-        self.timer = Timer(mode=Timer.PERIODIC, freq=15, callback=self.isr_update)
+        self.timer = Timer(mode=Timer.PERIODIC, freq=10, callback=self.isr_update)
 
     def next(self, seek=1):
         """Seek to the next animation"""
@@ -110,37 +123,43 @@ class badge(object):
         self.animation_current = self.animation_list[self.animation_index](self)
         print(f"Playing animation: {self.animation_current.__qualname__}")
 
-    def blush(self, mix):
-        pass
-        # if mix > 1.0: mix = 1.0
-        # if mix < 0.0: mix = 0.0
-        # for i in range(len(self.disp.cheeks)):
-        #     self.disp.cheeks[i].r = (self.disp.cheeks[i].r * (1-mix)) + (mix * 255)
-        #     self.disp.cheeks[i].g = (self.disp.cheeks[i].g * (1-mix)) + (mix * 10)
-        #     self.disp.cheeks[i].b = (self.disp.cheeks[i].b * (1-mix)) + (mix * 10)
+    def boop(self, mix):
+        if mix > 1.0: mix = 1.0
+        if mix < 0.0: mix = 0.0
+        for i in range(len(self.disp.downward)):
+            self.disp.downward[i].r = (self.disp.downward[i].r * (1-mix))
+            self.disp.downward[i].g = (self.disp.downward[i].g * (1-mix))
+            self.disp.downward[i].b = (self.disp.downward[i].b * (1-mix))
+        for x in range(7):
+            for y in range(4):
+                x_offset = x + self.boop_offset
+                if x_offset <  0: x_offset = 0
+                if x_offset > 17: x_offset = 17
+                self.disp.eye_grid[x][y].r += self.boop_img[x_offset+(3-y)*18]
+                self.disp.eye_grid[x][y].g += self.boop_img[x_offset+(3-y)*18]
+                self.disp.eye_grid[x][y].b += self.boop_img[x_offset+(3-y)*18]
+
 
     def isr_update(self,*args):
         schedule(self.update, self)
 
     def update(self,*args):
         self.touch.update()
-        if (self.touch.channels[3].level > 0.3):
-            # Invoke the animation's boop method, if present.
-            # if (hasattr(self.animation_current, "boop") and
-            #     callable(self.animation_current.boop) and
-            #     self.blush_count < 50):
-            #     self.animation_current.boop()
+        self.last_boop_level = self.boop_level
+        self.boop_level = self.touch.channels[2].level
+        if (self.boop_level > 0.3):
+            if (self.last_boop_level <= 0.3):
+                self.boop_offset = -5
+                self.boop_mix    = 1.0
 
-            # Start blushing
-            self.blush_count = 50
-            if self.blush_mix < 1.0:
-                self.blush_mix += 0.5
+            # Start booping
+            self.boop_count = 20
         else:
-            # Fade out the blush
-            if self.blush_count > 0:
-                self.blush_count -= 1
-            elif self.blush_mix > 0.0:
-                    self.blush_mix -= 0.05
+            # Fade out the boop
+            if self.boop_count > 0:
+                self.boop_count -= 1
+            elif self.boop_mix > 0.0:
+                    self.boop_mix -= 0.05
 
         self.sw4_state <<= 1
         self.sw4_state |= self.sw4()
@@ -176,20 +195,24 @@ class badge(object):
 
         self.animation_current.update()
 
-        # # Mix the blush effect into the cheeks - then restore the state of the
-        # # cheeks when we're done so we don't interfere with any animation state
-        # backup = [rgb_value(i.r, i.g, i.b) for i in self.disp.cheeks]
-        # self.blush(self.blush_mix)
+        # Mix the boop effect in - then restore the state
+        # when we're done so we don't interfere with any animation state
+
+        if (self.boop_mix > 0.0):
+            backup = [rgb_value(i.r, i.g, i.b) for i in self.disp.downward]
+            self.boop(self.boop_mix)
         self.disp.update()
-        # for i in range(len(backup)):
-        #     self.disp.cheeks[i].copy(backup[i])
+        if (self.boop_mix > 0.0):
+            self.boop_offset += 1
+            for i in range(len(backup)):
+                self.disp.downward[i].copy(backup[i])
 
         gc.collect()
 
     def run(self):
         while True:
             self.update()
-            time.sleep(1/15)
+            time.sleep(1/10)
 
 
 global t

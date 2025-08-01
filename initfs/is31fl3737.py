@@ -191,7 +191,7 @@ class is31fl3737(object):
         self.i2c.writeto_mem(self.I2C_ADDR, 1, bytes([50]))
 
     def update(self):
-        for i in range(48):
+        for i in range(42):
             self.set_led_raw(i, self.leds[i+1]) # change from last year - D<x> = led<x> and there's no D0
         self.set_page(1)
         self.i2c.writeto_mem(self.I2C_ADDR,   0, self.leds_raw[  0:127])
