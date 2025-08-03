@@ -12,6 +12,7 @@ class rgb_value(object):
             self.value[0] = r
             self.value[1] = g
             self.value[2] = b
+            self.addr = int(0)
 
     @property 
     def r(self): return self.value[0]
@@ -151,7 +152,13 @@ class is31fl3737(object):
         self.sdb = Pin(3, Pin.OUT)
         self.leds_raw = bytearray(256)
         self.brightness = 256
-        
+
+        for i in range(len(self.leds)-1):
+            addr = int((i) % 12)
+            if addr > 5: addr += 2
+            addr += ((i) // 12)*0x30
+            self.leds[i+1].addr = addr&0xFF
+
         self.power_on()
         self.init()
 
@@ -191,20 +198,14 @@ class is31fl3737(object):
         self.i2c.writeto_mem(self.I2C_ADDR, 1, bytes([50]))
 
     def update(self):
-        for i in range(42):
-            self.set_led_raw(i, self.leds[i+1]) # change from last year - D<x> = led<x> and there's no D0
+        for i in range(48):
+            led = self.leds[i]
+            self.leds_raw[led.addr+0x00] = led.value[2]*self.brightness//256
+            self.leds_raw[led.addr+0x10] = led.value[1]*self.brightness//256
+            self.leds_raw[led.addr+0x20] = led.value[0]*self.brightness//256
         self.set_page(1)
         self.i2c.writeto_mem(self.I2C_ADDR,   0, self.leds_raw[  0:127])
         self.i2c.writeto_mem(self.I2C_ADDR, 128, self.leds_raw[128:255])
-
-    def set_led_raw(self, led_num, led):
-        addr = int(led_num % 12)
-        if addr > 5: addr += 2
-        addr += (led_num // 12)*0x30
-        self.leds_raw[(addr+0x00)&0xFF] = led.value[2]*self.brightness//256
-        self.leds_raw[(addr+0x10)&0xFF] = led.value[1]*self.brightness//256
-        self.leds_raw[(addr+0x20)&0xFF] = led.value[0]*self.brightness//256
-
 
     def clear(self):
         for i in range(49):

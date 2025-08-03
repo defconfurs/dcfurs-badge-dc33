@@ -78,9 +78,9 @@ class badge(object):
         self.boop_level = 0.0
         self.last_boop_level = 0.0
         self.half_bright = False
-        self.boop_count = 0
-        self.boop_mix = 0.5
-        self.boop_offset = -8
+        self.boop_count = 0 #20
+        self.boop_mix = 0.0 #1.0
+        self.boop_offset = 0
         self.pallet_index = 0
         self.pallet_functions = [pallet_rainbow, pallet_blue, pallet_red, pallet_green, pallet_purple]
 
@@ -104,11 +104,11 @@ class badge(object):
         self.pallet = [array.array("f", [0.0,0.0,0.0]) for i in range(1024)]
         self.pallet_functions[self.pallet_index](self.pallet)
 
-        #                  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17
-        self.boop_img = (  0,  0,171,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,182,163, 30,  0,
-                           0,  0,183,174, 30,  0, 30,175, 30,  0, 30,175, 30,  0,168,  0,159,  0,
-                           0,  0,171,  0,159,  0,171,  0,171,  0,171,  0,171,  0,173,159, 30,  0,
-                           0,  0,172,157, 30,  0, 30,154, 30,  0, 30,154, 30,  0,182, 10,  0,  0,)
+        #                            0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
+        self.boop_img = bytearray([  0,  0,  0,  0,  0,  0,171,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,182,163, 30,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                                     0,  0,  0,  0,  0,  0,183,174, 30,  0, 30,175, 30,  0, 30,175, 30,  0,168,  0,159,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                                     0,  0,  0,  0,  0,  0,171,  0,159,  0,171,  0,171,  0,171,  0,171,  0,173,159, 30,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                                     0,  0,  0,  0,  0,  0,172,157, 30,  0, 30,154, 30,  0, 30,154, 30,  0,182, 10,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0])
 
 
         print("Hack the Monarchy!")
@@ -130,15 +130,16 @@ class badge(object):
             self.disp.downward[i].r = (self.disp.downward[i].r * (1-mix))
             self.disp.downward[i].g = (self.disp.downward[i].g * (1-mix))
             self.disp.downward[i].b = (self.disp.downward[i].b * (1-mix))
-        for x in range(7):
-            for y in range(4):
-                x_offset = x + self.boop_offset
-                if x_offset <  0: x_offset = 0
-                if x_offset > 17: x_offset = 17
-                self.disp.eye_grid[x][y].r += self.boop_img[x_offset+(3-y)*18]
-                self.disp.eye_grid[x][y].g += self.boop_img[x_offset+(3-y)*18]
-                self.disp.eye_grid[x][y].b += self.boop_img[x_offset+(3-y)*18]
-
+        boop_addr = self.boop_offset
+        for y in range(3,-1,-1):
+            for x in range(7):
+                boop_addr &= 0x7F
+                pixel = self.boop_img[boop_addr]
+                self.disp.eye_grid[x][y].r += pixel
+                self.disp.eye_grid[x][y].g += pixel
+                self.disp.eye_grid[x][y].b += pixel
+                boop_addr += 1
+            boop_addr += 25
 
     def isr_update(self,*args):
         schedule(self.update, self)
@@ -149,7 +150,7 @@ class badge(object):
         self.boop_level = self.touch.channels[2].level
         if (self.boop_level > 0.3):
             if (self.last_boop_level <= 0.3):
-                self.boop_offset = -5
+                self.boop_offset = 0
                 self.boop_mix    = 1.0
 
             # Start booping
@@ -159,7 +160,7 @@ class badge(object):
             if self.boop_count > 0:
                 self.boop_count -= 1
             elif self.boop_mix > 0.0:
-                    self.boop_mix -= 0.05
+                    self.boop_mix -= 0.1
 
         self.sw4_state <<= 1
         self.sw4_state |= self.sw4()
