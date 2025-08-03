@@ -126,18 +126,20 @@ class badge(object):
     def boop(self, mix):
         if mix > 1.0: mix = 1.0
         if mix < 0.0: mix = 0.0
-        for i in range(len(self.disp.downward)):
-            self.disp.downward[i].r = (self.disp.downward[i].r * (1-mix))
-            self.disp.downward[i].g = (self.disp.downward[i].g * (1-mix))
-            self.disp.downward[i].b = (self.disp.downward[i].b * (1-mix))
+        int_mix = int(255*(1.0-mix))
+
+        for led in self.disp.leds:
+            led.value[0] = (led.value[0]*int_mix)>>8
+            led.value[1] = (led.value[1]*int_mix)>>8
+            led.value[2] = (led.value[2]*int_mix)>>8
         boop_addr = self.boop_offset
         for y in range(3,-1,-1):
             for x in range(7):
                 boop_addr &= 0x7F
                 pixel = self.boop_img[boop_addr]
-                self.disp.eye_grid[x][y].r += pixel
-                self.disp.eye_grid[x][y].g += pixel
-                self.disp.eye_grid[x][y].b += pixel
+                self.disp.eye_grid[x][y].value[0] += pixel
+                self.disp.eye_grid[x][y].value[1] += pixel
+                self.disp.eye_grid[x][y].value[2] += pixel
                 boop_addr += 1
             boop_addr += 25
 
@@ -200,7 +202,7 @@ class badge(object):
         # when we're done so we don't interfere with any animation state
 
         if (self.boop_mix > 0.0):
-            backup = [rgb_value(i.r, i.g, i.b) for i in self.disp.downward]
+            backup = [rgb_value(i.value[0], i.value[1], i.value[2]) for i in self.disp.downward]
             self.boop(self.boop_mix)
         self.disp.update()
         if (self.boop_mix > 0.0):
