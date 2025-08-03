@@ -1,0 +1,1 @@
+To restore default MicroPython filesystem, delete all files and hit reset on badge.
