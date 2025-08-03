@@ -57,3 +57,4 @@ We have been having a lot of "fun" getting this badge to you this year, PCBWay t
 - **Software and Build Toolchain** - Naomi Kirby
 - **Ideas and maybe software someday** - NullFox
 - **Assembly and putting up with Kay** - Colin and Matt at PCBx.io.
+- **Soldering on battery packs** - @Fujimaru_husky
