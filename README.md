@@ -31,13 +31,12 @@ The files in the PCB_Stuff directory consist of:
 - DCF2025_Badge_2025-07-18.pdf - This is a PDF of the schematic.
 - DCFurs 2025 Badge BoM.xlsx - This is an Excel spreadsheet of the Bill of Materials as exported from Google Docs.
 
-Whats missing:
-- KiCAD files, minus the board.
-- Information about how to connect JTAG to the STM32WL chip.
-
 ## TODO
 
 - **Prize** Get Meshtastic working on the badge and get a free badge next year!
+- Moar animations!
+- KiCAD files, minus the board, these will be released in late August or September after we have verified that they do not contain stuff we can't license as open hardware.
+- Information about how to connect JTAG to the STM32WL chip.
 
 ## More Info
 So, were going to do a thing this year where the software on the badge is not complete and people are welcome to make it more complete.    On Wednesday or really early Thursday morning of the con, we will make the repo with this years software public.
@@ -60,3 +59,35 @@ If your going to muck around with the software on the STM32WL chip, you will wan
 - **Ideas and maybe software someday** - NullFox
 - **Assembly and putting up with Kay** - Colin and Matt at PCBx.io.
 - **Soldering on battery packs** - @Fujimaru_husky
+
+## Contributing
+
+To contribute, clone this repository and when your ready to submit your work, send us a pull request. You will want to update the contributors.txt file and the credits.txt file with your attibutions. Contributors agree to abide by the DEFCON Furs code of conduct located at https://2025.dcfurs.com/code-of-conduct and agree to have their code licensed under the GNU General Public License version 2.
+
+## License and Copyrights
+
+Artwork used for this badge is Copyright (C) 2025 Vurt, used with permission.
+Hardware design for this badge is Copyright (C) 2022 - 2025 Kyle "Kay" Fox, and is licensed under the Creative Commons BY-SA 4.0 license, see https://creativecommons.org/licenses/by-sa/4.0/
+
+
+
+## Tools Used
+
+Software:
+- KiCad 8.0.8 
+- Inkscape 1.4.2
+- svg2shenzhen 0.2.18.7
+- Arduino 1.8.19 (Badge test tools and "blessing" code)
+- Arduino IDE 2.3.6 (Further refinement of badge test tools and "blessing" code)
+
+Soldering:
+- Hakko 936 (Kay's soldering iron)
+- Hakko FX-888D (Soldering iron Fujimaru used)
+- Pinecil2 (Field repairs)
+
+Solder:
+- Production PCBs were made using AIM REL61 solder, this includes repairs made at Alo's house.
+- Protoype badges, after-dark badges and repairs done at Kay's house used Sparkle (Senju Metals) M705 solder.   I'd love to use REL61, but I paid $300 for this bottle of M705 in 2011 and I keep it in the fridge like a prized sourdough starter.
+- All solder used is lead-free and conforms to SAC305 standards.
+- Both PCBx.io and Kay's work conform to IPC-A-610 standards.
+- Only halogen-free solder flux was used.

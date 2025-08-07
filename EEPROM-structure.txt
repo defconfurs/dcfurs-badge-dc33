@@ -1,0 +1,77 @@
+EEPROM Structure:
+
+Name			Bytes	Type	Example			Description
+MAGIC			8	STR	DCFURS33		Valid data indicator, 
+VER			2	INT	0001h			Configuration block format version.
+LEN			2	INT	0100h			Configuration block length in bytes (including FEC).
+Badge_Incept_Date	8	Epoch				Date and time the badge was created.
+Badge_Design_Number	2	INT	292			DF Design Number for the badge.
+Badge_Design_Revision	1	INT	1			Revision Number for the badge.
+Badge_Design_Name	15	PSTR	14,"Georges Danton"	Name of the design.
+Badge_Design_Event	17	PSTR	16,"DEFCON Furs 2025"	Name of the event.
+Badge_PCB_Revision	1	INT	1			What revision of the PCB is this?
+Badge_PCB_Origin	1	INT				Where the PCB was made.
+				-	00h			Undefined
+				-	01h			OSHPark
+				-	02h			Sunstone Circuits	
+				-	03h			PCBWay
+				-	04h			JLCPCB				
+Badge_PCB_Assembly	1	INT				Where the PCB was assembled.
+				-	00h			Undefined
+				-	01h			DigitalFennec
+				-	02h			PCBX
+Badge_Colour		1	INT				What colour is the badge.
+				-	00h		Undefined
+				-	01h		OSHPark Purple 
+				-	02h		OSHPark After Dark
+				-	03h		White
+				-	04h		Black
+				-	05h		Red
+				-	06h		Yellow
+				-	07h		Blue
+				-	08h		Purple
+				-	09h		Green
+				-	0Ah		Gray
+				-	0Bh		Matte Black
+				-	0Ch		Matte Green
+				-	0Dh		None
+Badge_Type		1	INT			What type of badge is this.
+				-	00h		Default
+				-	01h		Protype
+				-	02h		Gold
+				-	03h		Red - Staff
+				-	04h		VIP
+				-	05h		Reserved
+				-	06h		Demo
+	Reserved
+Badge_Soft_ISL		2	INT			Intial software load.
+Badge_Radio_ISL		2	INT			Intial software load, Radio.
+Badge_Radio_MinCompat	1	INT			Minimum radio compatability level.
+FEC			2	BYTES	------		Forward error correcting code.
+
+
+Struct that was actually used:
+struct BadgeInfo {
+  byte          MAGIC[8]                = { 0x44, 0x43, 0x46, 0x55, 0x52, 0x53, 0x33, 0x33 };
+  unsigned int  VER                     = 1;
+  unsigned int  LEN                     = 0;
+  unsigned long Badge_Incept_Date_pad   = 0;
+  // unsigned long Badge_incept_Date       = 1754172000; // Prototypes
+  // unsigned long Badge_incept_Date       = 1754233373; // Black
+  // unsigned long Badge_incept_Date       = 1754236971; // Red
+  // unsigned long Badge_incept_Date       = 1754237208; // Second round black?
+  unsigned long Badge_incept_Date       = 1754237208; // 
+  unsigned int  Badge_Design_Number     = 292;
+  unsigned char Badge_Design_Revision   = 1;
+  byte          Badge_Design_Name[15]   = { 14, 0x47, 0x65, 0x6F, 0x72, 0x67, 0x65, 0x73, 0x20, 0x44, 0x61, 0x6E, 0x74, 0x6F, 0x6E };
+  byte          Badge_Design_Event[17]  = { 16, 0x44, 0x45, 0x46, 0x43, 0x4F, 0x4E, 0x20, 0x46, 0x75, 0x72, 0x73, 0x20, 0x32, 0x30, 0x32, 0x35 };
+  byte          Badge_PCB_Revision      = 1;
+  byte          Badge_PCB_Origin        = 3; // 1 = OSHPark, 3 =PCBWay
+  byte          Badge_PCB_Assembly      = 2; // 1 = Kay, 2 = PCBx
+  byte          Badge_Colour            = 4; // 1 = Purple, 4 = Black, 5 = Red
+  byte          Badge_Type              = 0; // 1 = Proto, 0 = Normal, 3 = Staff, 6 = Demo
+  unsigned int  Badge_Soft_ISL          = 0; 
+  unsigned int  Badge_Radio_ISL         = 0;
+  byte          Badge_Radio_Compat      = 0;
+  unsigned int  FED_dummy               = 0;
+};

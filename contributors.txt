@@ -1,0 +1,14 @@
+DEFCON Furs 2025 Badge Contributors
+
+Core team:
+Artwork - Vurt
+PCB Design and PM - Kyle "Kay" Fox
+Sales and Accounting - Alofoxx
+Software - Loial Otter
+Software and Build Toolchain - Naomi Kirby
+Ideas and maybe software someday - NullFox
+Assembly and putting up with Kay - Colin and Matt at PCBx.io.
+Soldering on battery packs - @Fujimaru_husky
+
+Additional Contributors:
+[add your name and contact here]
