@@ -62,14 +62,16 @@ If your going to muck around with the software on the STM32WL chip, you will wan
 
 ## Contributing
 
-To contribute, clone this repository and when your ready to submit your work, send us a pull request. You will want to update the contributors.txt file and the credits.txt file with your attibutions. Contributors agree to abide by the DEFCON Furs code of conduct located at https://2025.dcfurs.com/code-of-conduct and agree to have their code licensed under the GNU General Public License version 2.
+To contribute, clone this repository and when your ready to submit your work, send us a pull request. You will want to update the contributors.txt file and the initfs/credits.txt file with your attibutions. Contributors agree to abide by the DEFCON Furs code of conduct located at https://2025.dcfurs.com/code-of-conduct and agree to have their code licensed under the GNU General Public License version 2.
 
 ## License and Copyrights
 
-Artwork used for this badge is Copyright (C) 2025 Vurt, used with permission.
-Hardware design for this badge is Copyright (C) 2022 - 2025 Kyle "Kay" Fox, and is licensed under the Creative Commons BY-SA 4.0 license, see https://creativecommons.org/licenses/by-sa/4.0/
+Artwork used for this badge Copyright (C) 2025 Vurt, used with permission.
+Hardware design for this badge Copyright (C) 2022 - 2025 Kyle "Kay" Fox, and is licensed under the Creative Commons BY-SA 4.0 license, see https://creativecommons.org/licenses/by-sa/4.0/
+Github Actions and other build support Copyright (C) 2024 - 2025 Naomi Kirby, licensed under the GNU General Public License version 2.
+Badge Software and Animations Copyright (C) 2024 - 2025 Loial Otter, licensed under the GNU General Public License version 2.
 
-
+Reuse of the contents of this repository is permitted according to the above license restrictions.
 
 ## Tools Used
 
