@@ -66,11 +66,11 @@ To contribute, clone this repository and when your ready to submit your work, se
 
 ## License and Copyrights
 
-Artwork used for this badge Copyright (C) 2025 Vurt, used with permission.
-Hardware design for this badge Copyright (C) 2022 - 2025 Kyle "Kay" Fox, and is licensed under the Creative Commons BY-SA 4.0 license, see https://creativecommons.org/licenses/by-sa/4.0/
-Github Actions and other build support Copyright (C) 2024 - 2025 Naomi Kirby, licensed under the GNU General Public License version 2.
-Badge Software and Animations Copyright (C) 2024 - 2025 Loial Otter, licensed under the GNU General Public License version 2.
-
+Artwork used for this badge Copyright (C) 2025 Vurt, used with permission.  
+Hardware design for this badge Copyright (C) 2022 - 2025 Kyle "Kay" Fox, and is licensed under the Creative Commons BY-SA 4.0 license, see https://creativecommons.org/licenses/by-sa/4.0/  
+Github Actions and other build support Copyright (C) 2024 - 2025 Naomi Kirby, licensed under the GNU General Public License version 2.  
+Badge Software and Animations Copyright (C) 2024 - 2025 Loial Otter, licensed under the GNU General Public License version 2.  
+  
 Reuse of the contents of this repository is permitted according to the above license restrictions.
 
 ## Tools Used
