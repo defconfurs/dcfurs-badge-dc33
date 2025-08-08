@@ -7,6 +7,10 @@ Unfortunately as the Revolution wound on, with questions of financial impropriet
 
 **Liberté, égalité, fraternité!**
 
+## If you have issues with your badge...
+
+If you hagve issues with your badge contact Kay on Telegram @thekayfox or on Signal @thekayfox.55.
+
 ## Firmware
 
 We will be promoting builds from this repo to releases perodically, see the releases section for the latest firmware.  
