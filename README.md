@@ -9,7 +9,9 @@ Unfortunately as the Revolution wound on, with questions of financial impropriet
 
 ## Firmware
 
-We will be promoting builds from this repo to releases perodically, see the releases section for the latest firmware.
+We will be promoting builds from this repo to releases perodically, see the releases section for the latest firmware.  
+
+If you want to try out the latest greatest build, you can navigate to the Actions section, click on the title of an action and download the built UF2 file from the Artifacts section.
 
 ## Updating
 
@@ -35,6 +37,7 @@ The files in the PCB_Stuff directory consist of:
 
 - **Prize** Get Meshtastic working on the badge and get a free badge next year!
 - Moar animations!
+- Connectivity to the M24SR16 chip, this is not trivial as it wants to talk like a smartcard, at least according to the docs and the C library I used to write to it while setting up the other EEPROM.
 - KiCAD files, minus the board, these will be released in late August or September after we have verified that they do not contain stuff we can't license as open hardware.
 - Information about how to connect JTAG to the STM32WL chip.
 
