@@ -11,6 +11,10 @@ Unfortunately as the Revolution wound on, with questions of financial impropriet
 
 If you hagve issues with your badge contact Kay on Telegram @thekayfox or on Signal @thekayfox.55.
 
+Current issues we are seeing with the badge:
+ - Some badges will not boot, resetting them may get them to start working. I have seen this when the batteries are low, but some people have this issue with brand new batteries.
+ - If left on the first animation, the badge may crash at some point, this is most likely an overflow of a counter. Loial was looking into this.
+
 ## Firmware
 
 We will be promoting builds from this repo to releases perodically, see the releases section for the latest firmware.  
