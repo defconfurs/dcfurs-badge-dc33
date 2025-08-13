@@ -63,6 +63,75 @@ def pallet_green(target):
 def pallet_purple(target):
     pallet_set_colour(target, 0.25, 0.3, 0.8, 0.4)
 
+
+class ScritchDetector:
+    def __init__(self, eps_ms=500, min_ms=100, max_ms=1000, cooldown_ms=200):
+        self.EPS_MS = eps_ms          # allow small simultaneity between adjacent pads
+        self.MIN_MS = min_ms          # 0.1 s
+        self.MAX_MS = max_ms          # 1.0 s
+        self.COOLDOWN_MS = cooldown_ms
+        self._since_ts = 0            # ignore touch starts older than this
+        self._last_fire_ts = -10**9
+
+    def _is_monotonic_nondec(self, times, idxs):
+        # Check t[idx0] <= t[idx1] <= t[idx2] <= t[idx3] with EPS tolerance
+        for a, b in zip(idxs, idxs[1:]):
+            if times[a] > times[b] + self.EPS_MS:
+                return False
+        return True
+
+    def check(self, now_ms, touch_start_time, is_touched, touch_end_time):
+        """
+        Returns:
+          'DOWN'
+          'UP'
+          None if no swipe.
+        Notes:
+          - Uses only start times to determine order.
+          - Allows multiple pads to be touched at the same time (within EPS).
+          - Rejects out-of-order (e.g., pad 2 before pad 1 for an Up->Down).
+        """
+
+        # Cooldown to avoid double-firing on the same swipe cluster
+        if now_ms - self._last_fire_ts < self.COOLDOWN_MS:
+            return None
+
+        # Require that all four pads have a start newer than the last accepted cluster boundary
+        starts = touch_start_time  # alias
+        if not all(touch_start_time) or not all(touch_end_time) or not all(starts[i] > self._since_ts for i in range(4)):
+            return None
+
+        # Compute the swipe window bounds from starts
+        tmin = min(starts)
+        tmax = max(starts)
+        span = tmax - tmin
+        if span < self.MIN_MS or span > self.MAX_MS:
+            return None
+
+        # Validate monotone order for L->R or R->L with tolerance
+        left_to_right_idxs  = (0, 1, 2, 3)
+        right_to_left_idxs  = (3, 2, 1, 0)
+
+        is_LR = self._is_monotonic_nondec(starts, left_to_right_idxs)
+        is_RL = self._is_monotonic_nondec(starts, right_to_left_idxs)
+
+        if not (is_LR or is_RL):
+            # Out-of-order (e.g., pad 2 fired clearly before pad 1), reject
+            return None
+
+        # Optional: sanity that each pad actually engaged (still touching or had an end ≥ start)
+        for i in range(4):
+            if touch_end_time[i] < starts[i] and not is_touched[i]:
+                # If a pad reports an end before its start and is not currently touched, data is inconsistent
+                return None
+
+        # Success — record cluster boundary & cooldown anchor
+        self._since_ts = tmax           # ignore starts at or before this for the next detection
+        self._last_fire_ts = now_ms
+
+        return 'UD' if is_LR and not is_RL else 'DU'
+
+
 class badge(object):
     def __init__(self):
         self.disp = is31fl3737()
@@ -94,6 +163,17 @@ class badge(object):
         self.sw5_count = 0
         self.sw4_last  = 0
         self.sw5_last  = 0
+
+         # New stuff for scritch gesture detection (move finger back and forth across TCH1-4 quickly)
+        self.touch_start_time = [None] * 4  # Track start time of touches
+        self.touch_end_time = [None] * 4  # Track end time of touches
+        self.is_touched = [False] * 4  # Track end time of touches
+        self.last_expr_scritch = None # Last detected scritch direction (up or down)
+        self.scritch_mix = 0 # Capped at 1.0
+        self.scritch_mix_target = 0 # This can go a bit over 1.0 to maintain a more steady effect with continual scritching
+        self.scritch_detector = ScritchDetector(eps_ms=500, min_ms=100, max_ms=1000, cooldown_ms=200)
+        self.prevent_isr_update = False # Used to prevent race condition with ISR update during scritch effect
+
 
         # Setup the initial animation
         self.animation_list = animations.all()
@@ -143,14 +223,47 @@ class badge(object):
                 boop_addr += 1
             boop_addr += 25
 
-    def isr_update(self,*args):
-        schedule(self.update, self)
+    def scritch_effect(self, mix):
+        if mix > 1.0: mix = 1.0
+        if mix < 0.0: mix = 0.0
+        for i in range(len(self.disp.leds)):
+                self.disp.leds[i].r = (self.disp.leds[i].r * (1 - mix)) + (mix * 255)
+                self.disp.leds[i].g = (self.disp.leds[i].g * (1 - mix)) + (mix * 5)
+                self.disp.leds[i].b = (self.disp.leds[i].b * (1 - mix)) + (mix * 5)
 
-    def update(self,*args):
+    def isr_update(self,*args):
+        if not self.prevent_isr_update:
+            schedule(self.update, self)
+
+    def touch_readings_update(self):
         self.touch.update()
+        current_time = time.ticks_ms()
+        prev_is_touched = self.is_touched
+        curr_is_touched = [tc.level > 0.18 for tc in self.touch.channels]
+        for ch_num, ch_is_touched in enumerate(curr_is_touched):
+            if ch_is_touched and not prev_is_touched[ch_num]:
+                self.touch_start_time[ch_num] = current_time
+
+            if not ch_is_touched and prev_is_touched[ch_num]:
+                self.touch_end_time[ch_num] = current_time
+        self.is_touched = curr_is_touched
+    
+    def should_prevent_boop_detection(self, current_time):
+        # Detect if user is likely performing scritch gesture. If so, prevent booping.
+
+        if (self.touch.channels[0].level < 0.18 and self.touch.channels[1].level < 0.18) and \
+                (self.touch_start_time[0] and self.touch_start_time[1] and self.touch_start_time[2]) and \
+                (self.touch_start_time[0] < (current_time - 750) and self.touch_start_time[1] < (current_time - 750) and self.touch_start_time[3] < (current_time - 750)) and \
+                (self.touch_end_time[0] and self.touch_end_time[1] and self.touch_start_time[3]) and \
+                (self.touch_end_time[0] < (current_time - 300) and self.touch_end_time[1] < (current_time - 300) and self.touch_end_time[3] < (current_time - 300)):
+            return False
+        return True
+        
+    def update(self,*args):
+        current_time = time.ticks_ms()
         self.last_boop_level = self.boop_level
         self.boop_level = self.touch.channels[2].level
-        if (self.boop_level > 0.3):
+        if (self.boop_level > 0.3 and not self.should_prevent_boop_detection(current_time)):
             if (self.last_boop_level <= 0.3):
                 self.boop_offset = 0
                 self.boop_mix    = 1.0
@@ -163,6 +276,20 @@ class badge(object):
                 self.boop_count -= 1
             elif self.boop_mix > 0.0:
                     self.boop_mix -= 0.1
+
+        dirn = self.scritch_detector.check(current_time, self.touch_start_time, self.is_touched, self.touch_end_time)
+        if (dirn != self.last_expr_scritch):
+            self.last_expr_scritch = dirn
+            if dirn:
+                self.scritch_mix_target = min(self.scritch_mix_target + 0.4, 1.3)
+                # Prevent ISR update due to race condition:
+                self.prevent_isr_update = True
+        
+        if self.scritch_mix_target > 0.0:
+            self.scritch_mix = max(min(self.scritch_mix_target, 1.0) - 0.03, 0)
+            self.scritch_mix_target = max(self.scritch_mix_target - 0.03, 0)
+        elif self.scritch_mix == 0:
+            self.prevent_isr_update = False
 
         self.sw4_state <<= 1
         self.sw4_state |= self.sw4()
@@ -198,15 +325,18 @@ class badge(object):
 
         self.animation_current.update()
 
-        # Mix the boop effect in - then restore the state
+        # Mix the boop effect and scritch effects in - then restore the state
         # when we're done so we don't interfere with any animation state
-
-        if (self.boop_mix > 0.0):
+        if (self.boop_mix > 0.0) or (self.scritch_mix > 0.0):
             backup = [rgb_value(i.value[0], i.value[1], i.value[2]) for i in self.disp.downward]
+        if (self.boop_mix > 0.0):
             self.boop(self.boop_mix)
+        if (self.scritch_mix > 0.0):
+            self.scritch_effect(self.scritch_mix)
         self.disp.update()
         if (self.boop_mix > 0.0):
             self.boop_offset += 1
+        if (self.boop_mix > 0.0) or (self.scritch_mix > 0.0):
             for i in range(len(backup)):
                 self.disp.downward[i].copy(backup[i])
 
@@ -214,10 +344,16 @@ class badge(object):
 
     def run(self):
         while True:
+            # Run touch reading update more often than animtion update, to detect swipes/scritches better
+            for _ in range(20):
+                if self.prevent_isr_update:
+                    # Shorter sleep time to compensate for not having isr update
+                    time.sleep_ms(1)
+                else:
+                    time.sleep_ms(5)
+                self.touch_readings_update()
             self.update()
-            time.sleep(1/10)
-
 
 global t
 t = badge()
-#t.run()
+t.run()
