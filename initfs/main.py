@@ -356,4 +356,4 @@ class badge(object):
 
 global t
 t = badge()
-t.run()
+#t.run()
