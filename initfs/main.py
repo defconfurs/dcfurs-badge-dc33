@@ -129,7 +129,7 @@ class ScritchDetector:
         self._since_ts = tmax           # ignore starts at or before this for the next detection
         self._last_fire_ts = now_ms
 
-        return 'UD' if is_LR and not is_RL else 'DU'
+        return 'UP' if is_LR and not is_RL else 'DOWN'
 
 
 class badge(object):
