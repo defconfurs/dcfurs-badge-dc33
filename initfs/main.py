@@ -8,118 +8,10 @@ from touch import TouchController
 import array
 import gc
 import animations
+import lora_e5_radio
 
 from is31fl3737 import is31fl3737, rgb_value
 machine.freq(240000000)
-
-radio_uart = UART(1, baudrate=9600, tx=Pin(8), rx=Pin(9), timeout=250)
-
-def flush_uart():
-    # drain any stale bytes
-    while radio_uart.any():
-        radio_uart.read()
-        time.sleep_ms(5)
-
-def send_at(cmd, delay_ms=200):
-    flush_uart()
-    radio_uart.write(cmd + "\r\n")
-    time.sleep_ms(delay_ms)
-    resp = b""
-    # read whatever arrived
-    while radio_uart.any():
-        chunk = radio_uart.read()
-        if chunk:
-            resp += chunk
-        time.sleep_ms(10)
-    # return plain text (ignore decode errors)
-    return resp.decode('utf-8', 'ignore').strip()
-
-rx_buf = b""
-last_rx_arm = time.ticks_ms()
-boop_rx_is_armed = False
-
-def init_radio():
-    print(send_at("AT"))
-    print(send_at("AT+MODE=TEST"))
-    print(send_at("AT+TEST=RFCFG,903.3,SF7,125,12,15,5,ON,OFF,OFF"))
-
-def arm_radio_rx(verbose=False, delay_ms=100):
-    global boop_rx_is_armed
-    boop_rx_is_armed = True
-    if verbose:
-        print(send_at("AT+TEST=RXLRPKT", delay_ms=delay_ms))
-    else:
-        send_at("AT+TEST=RXLRPKT", delay_ms=delay_ms)
-
-def hex_to_ascii(s):
-    # incoming payload appears as hex bytes (e.g. 48656C6C6F...)
-    try:
-        b = bytes.fromhex(s)
-        # decode ASCII but fall back to repr if weird bytes
-        try:
-            return b.decode('utf-8')
-        except:
-            return str(b)
-    except:
-        return None
-        
-def check_for_boop_message():
-    global last_rx_arm, rx_buf
-    # checks to see if boop message received since last call
-    # collect any incoming bytes
-    found_boop = False
-    if radio_uart.any():
-        rx_buf += radio_uart.read()
-
-        # pull out complete lines (delimited by \n)
-        while b"\n" in rx_buf:
-            line_bytes, rx_buf = rx_buf.split(b"\n", 1)
-            line = line_bytes.decode("utf-8", "ignore").strip()
-            if not line:
-                continue
-
-            # show raw UART content for debugging
-            # print("RAW:", line)
-
-            # examples the modem emits:
-            # +TEST: LEN:12, RSSI:-45, SNR:10
-            # +TEST: RX "48656C6C6F20576F726C6421"
-            if line.startswith("+TEST: RX"):
-                q1 = line.find('"')
-                q2 = line.rfind('"')
-                payload_hex = None
-                if q1 != -1 and q2 != -1 and q2 > q1 + 1:
-                    payload_hex = line[q1+1:q2]
-                msg = hex_to_ascii(payload_hex) if payload_hex else None
-                if msg is not None:
-                    print("RX ASCII:", msg)
-                    if msg == "boop":
-                        found_boop = True
-                else:
-                    print("RX RAW  :", line)
-            else:
-                # print(line) # print RSSI/SNR for debugging
-                pass
-
-    if time.ticks_diff(time.ticks_ms(), last_rx_arm) > 15000:
-        # Periodically re-arm radio
-        arm_radio_rx()
-        last_rx_arm = time.ticks_ms()
-        
-    return found_boop
-
-def tx_boop(msg="boop", arm_rx_after_sent=False):
-    global boop_rx_is_armed
-    # TX as string; receiver will report hex of the same bytes
-    print(send_at('AT+TEST=TXLRSTR,"{}"'.format(msg), delay_ms=150))
-    boop_rx_is_armed = False
-    if arm_rx_after_sent:
-        time.sleep_ms(100)
-        arm_radio_rx()
-
-
-
-
 
 def pallet_rainbow(target):
     for i in range(len(target)):
@@ -285,6 +177,7 @@ class badge(object):
         # Stuff for remote boop handling
         self.boop_ended_last_loop = False
         self.boop_source = None # "local" or "remote"
+        self.radio = lora_e5_radio.LoraE5Radio()
 
         # Setup the initial animation
         self.animation_list = animations.all()
@@ -383,7 +276,7 @@ class badge(object):
             if (self.last_boop_level <= 0.3):
                 self.prevent_isr_update = True
                 # Transmit LoRa packet to trigger boops on nearby badges
-                tx_boop()
+                self.radio.tx_boop()
 
                 self.boop_offset = 0
                 self.boop_mix    = 1.0
@@ -392,7 +285,7 @@ class badge(object):
             # Start booping
             self.boop_count = 20
            
-        elif check_for_boop_message():
+        elif self.radio.check_for_boop_message():
             # Detect LoRa packet from boop on nearby badge
             print("detected remote boop")
             self.boop_offset = 0
@@ -403,8 +296,8 @@ class badge(object):
         else:
             if self.boop_ended_last_loop:
                 # Loop run after the one where boop_count reached 0
-                if not boop_rx_is_armed:
-                    arm_radio_rx()
+                if not self.radio.rx_is_armed:
+                    self.radio.arm_radio_rx()
                 self.boop_ended_last_loop = False
         
             # Fade out the boop
@@ -500,6 +393,4 @@ class badge(object):
 
 global t
 t = badge()
-init_radio()
-arm_radio_rx()
-t.run()
+# t.run()
