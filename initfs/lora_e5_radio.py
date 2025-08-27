@@ -99,7 +99,8 @@ class LoraE5Radio():
                         if msg == expected_msg:
                             found_boop = True
                     else:
-                        print("RX RAW  :", line)
+                        # print("RX RAW  :", line) # print full line for debugging
+                        pass
                 else:
                     # print(line) # print RSSI/SNR for debugging
                     pass

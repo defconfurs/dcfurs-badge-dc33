@@ -314,7 +314,7 @@ class badge(object):
             self.boop_count = 20
         elif self.radio.check_for_boop_message():
             # Detect LoRa packet from boop on nearby badge
-            print("detected remote boop")
+            print("Detected remote boop")
             self.prevent_isr_update = True
             self.boop_offset = 0
             self.boop_mix    = 1.0
@@ -419,4 +419,4 @@ class badge(object):
 
 global t
 t = badge()
-t.run()
+#t.run()
