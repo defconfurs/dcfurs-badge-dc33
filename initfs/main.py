@@ -255,21 +255,49 @@ class badge(object):
     def should_prevent_boop_detection(self, current_time):
         # Detect if user is likely performing scritch gesture. If so, prevent booping.
 
-        if ( (not self.touch_start_time[0] and not self.touch_start_time[1] and self.touch_start_time[2] and not self.touch_start_time[3])
-            or (self.touch.channels[0].level < 0.2 and self.touch.channels[1].level < 0.2  and self.touch.channels[3].level < 0.2) and \
-                #(self.touch_start_time[0] and self.touch_start_time[1] and self.touch_start_time[2] and self.touch_start_time[3]) and \
-                ((not  self.touch_start_time[0] or self.touch_start_time[0] < (current_time - 750)) and (not self.touch_start_time[1] or self.touch_start_time[1] < (current_time - 750)) and (not  self.touch_start_time[3] or self.touch_start_time[3] < (current_time - 750))) and \
-                #(self.touch_end_time[0] and self.touch_end_time[1] and self.touch_end_time[3]) and \
-                ((not self.touch_end_time[0] or self.touch_end_time[0] < (current_time - 300)) and (not self.touch_end_time[1] or self.touch_end_time[1] < (current_time - 300)) and (not self.touch_end_time[3] or self.touch_end_time[3] < (current_time - 300)))):
-            print("should not prevent boop")
-
+        if (
+            (
+                not self.touch_start_time[0]
+                and not self.touch_start_time[1]
+                and self.touch_start_time[2]
+                and not self.touch_start_time[3]
+            )
+            or (
+                self.touch.channels[0].level < 0.2
+                and self.touch.channels[1].level < 0.2
+                and self.touch.channels[3].level < 0.2
+            )
+            and (
+                (
+                    not self.touch_start_time[0]
+                    or self.touch_start_time[0] < (current_time - 750)
+                )
+                and (
+                    not self.touch_start_time[1]
+                    or self.touch_start_time[1] < (current_time - 750)
+                )
+                and (
+                    not self.touch_start_time[3]
+                    or self.touch_start_time[3] < (current_time - 750)
+                )
+            )
+            and (
+                (not self.touch_end_time[0] or self.touch_end_time[0] < (current_time - 300))
+                and (
+                    not self.touch_end_time[1] or self.touch_end_time[1] < (current_time - 300)
+                )
+                and (
+                    not self.touch_end_time[3] or self.touch_end_time[3] < (current_time - 300)
+                )
+            )
+        ):
             return False
+
     
         return True
         
     def update(self,*args):
         current_time = time.ticks_ms()
-
         self.last_boop_level = self.boop_level
         self.boop_level = self.touch.channels[2].level
         if (self.boop_level > 0.3 and self.boop_count == 0 and not self.should_prevent_boop_detection(current_time)):
@@ -284,18 +312,20 @@ class badge(object):
 
             # Start booping
             self.boop_count = 20
-           
         elif self.radio.check_for_boop_message():
             # Detect LoRa packet from boop on nearby badge
             print("detected remote boop")
+            self.prevent_isr_update = True
             self.boop_offset = 0
             self.boop_mix    = 1.0
             self.boop_count = 20
             self.boop_source = "remote"
-
         else:
             if self.boop_ended_last_loop:
                 # Loop run after the one where boop_count reached 0
+                # This is to make it so the re-arm (and associated delay)
+                # happens after the last frame in the boop animation, rather
+                # than causing a "stutter" on it
                 if not self.radio.rx_is_armed:
                     self.radio.arm_radio_rx()
                 self.boop_ended_last_loop = False
@@ -320,11 +350,8 @@ class badge(object):
             self.scritch_mix = max(min(self.scritch_mix_target, 1.0) - 0.03, 0)
             self.scritch_mix_target = max(self.scritch_mix_target - 0.03, 0)
         
-        
         if self.scritch_mix == 0 and self.boop_mix == 0:
             self.prevent_isr_update = False
-        else:
-            self.prevent_isr_update = True
 
         self.sw4_state <<= 1
         self.sw4_state |= self.sw4()
@@ -380,17 +407,16 @@ class badge(object):
     def run(self):
         while True:
             # Run touch reading update more often than animtion update, to detect swipes/scritches better
-            for _ in range(20):
+            for _ in range(10):
                 if self.prevent_isr_update:
                     # Shorter sleep time to compensate for not having isr update
                     time.sleep_ms(1)
                 else:
                     time.sleep_ms(5)
                 self.touch_readings_update()
-
             self.update()
 
 
 global t
 t = badge()
-# t.run()
+t.run()
