@@ -1,4 +1,4 @@
-from machine import Timer, Pin
+from machine import Timer, Pin, UART
 import machine
 from micropython import schedule
 import math
@@ -10,8 +10,116 @@ import gc
 import animations
 
 from is31fl3737 import is31fl3737, rgb_value
-
 machine.freq(240000000)
+
+radio_uart = UART(1, baudrate=9600, tx=Pin(8), rx=Pin(9), timeout=250)
+
+def flush_uart():
+    # drain any stale bytes
+    while radio_uart.any():
+        radio_uart.read()
+        time.sleep_ms(5)
+
+def send_at(cmd, delay_ms=200):
+    flush_uart()
+    radio_uart.write(cmd + "\r\n")
+    time.sleep_ms(delay_ms)
+    resp = b""
+    # read whatever arrived
+    while radio_uart.any():
+        chunk = radio_uart.read()
+        if chunk:
+            resp += chunk
+        time.sleep_ms(10)
+    # return plain text (ignore decode errors)
+    return resp.decode('utf-8', 'ignore').strip()
+
+rx_buf = b""
+last_rx_arm = time.ticks_ms()
+boop_rx_is_armed = False
+
+def init_radio():
+    print(send_at("AT"))
+    print(send_at("AT+MODE=TEST"))
+    print(send_at("AT+TEST=RFCFG,903.3,SF7,125,12,15,5,ON,OFF,OFF"))
+
+def arm_radio_rx(verbose=False, delay_ms=100):
+    global boop_rx_is_armed
+    boop_rx_is_armed = True
+    if verbose:
+        print(send_at("AT+TEST=RXLRPKT", delay_ms=delay_ms))
+    else:
+        send_at("AT+TEST=RXLRPKT", delay_ms=delay_ms)
+
+def hex_to_ascii(s):
+    # incoming payload appears as hex bytes (e.g. 48656C6C6F...)
+    try:
+        b = bytes.fromhex(s)
+        # decode ASCII but fall back to repr if weird bytes
+        try:
+            return b.decode('utf-8')
+        except:
+            return str(b)
+    except:
+        return None
+        
+def check_for_boop_message():
+    global last_rx_arm, rx_buf
+    # checks to see if boop message received since last call
+    # collect any incoming bytes
+    found_boop = False
+    if radio_uart.any():
+        rx_buf += radio_uart.read()
+
+        # pull out complete lines (delimited by \n)
+        while b"\n" in rx_buf:
+            line_bytes, rx_buf = rx_buf.split(b"\n", 1)
+            line = line_bytes.decode("utf-8", "ignore").strip()
+            if not line:
+                continue
+
+            # show raw UART content for debugging
+            # print("RAW:", line)
+
+            # examples the modem emits:
+            # +TEST: LEN:12, RSSI:-45, SNR:10
+            # +TEST: RX "48656C6C6F20576F726C6421"
+            if line.startswith("+TEST: RX"):
+                q1 = line.find('"')
+                q2 = line.rfind('"')
+                payload_hex = None
+                if q1 != -1 and q2 != -1 and q2 > q1 + 1:
+                    payload_hex = line[q1+1:q2]
+                msg = hex_to_ascii(payload_hex) if payload_hex else None
+                if msg is not None:
+                    print("RX ASCII:", msg)
+                    if msg == "boop":
+                        found_boop = True
+                else:
+                    print("RX RAW  :", line)
+            else:
+                # print(line) # print RSSI/SNR for debugging
+                pass
+
+    if time.ticks_diff(time.ticks_ms(), last_rx_arm) > 15000:
+        # Periodically re-arm radio
+        arm_radio_rx()
+        last_rx_arm = time.ticks_ms()
+        
+    return found_boop
+
+def tx_boop(msg="boop", arm_rx_after_sent=False):
+    global boop_rx_is_armed
+    # TX as string; receiver will report hex of the same bytes
+    print(send_at('AT+TEST=TXLRSTR,"{}"'.format(msg), delay_ms=150))
+    boop_rx_is_armed = False
+    if arm_rx_after_sent:
+        time.sleep_ms(100)
+        arm_radio_rx()
+
+
+
+
 
 def pallet_rainbow(target):
     for i in range(len(target)):
@@ -164,7 +272,7 @@ class badge(object):
         self.sw4_last  = 0
         self.sw5_last  = 0
 
-         # New stuff for scritch gesture detection (move finger back and forth across TCH1-4 quickly)
+        # Stuff for scritch gesture detection (move finger back and forth across TCH1-4 quickly)
         self.touch_start_time = [None] * 4  # Track start time of touches
         self.touch_end_time = [None] * 4  # Track end time of touches
         self.is_touched = [False] * 4  # Track end time of touches
@@ -173,7 +281,10 @@ class badge(object):
         self.scritch_mix_target = 0 # This can go a bit over 1.0 to maintain a more steady effect with continual scritching
         self.scritch_detector = ScritchDetector(eps_ms=500, min_ms=100, max_ms=1000, cooldown_ms=200)
         self.prevent_isr_update = False # Used to prevent race condition with ISR update during scritch effect
-
+        
+        # Stuff for remote boop handling
+        self.boop_ended_last_loop = False
+        self.boop_source = None # "local" or "remote"
 
         # Setup the initial animation
         self.animation_list = animations.all()
@@ -203,23 +314,23 @@ class badge(object):
         self.animation_current = self.animation_list[self.animation_index](self)
         print(f"Playing animation: {self.animation_current.__qualname__}")
 
-    def boop(self, mix):
+    def boop(self, mix, boop_source):
         if mix > 1.0: mix = 1.0
         if mix < 0.0: mix = 0.0
         int_mix = int(255*(1.0-mix))
 
         for led in self.disp.leds:
-            led.value[0] = (led.value[0]*int_mix)>>8
-            led.value[1] = (led.value[1]*int_mix)>>8
-            led.value[2] = (led.value[2]*int_mix)>>8
+                led.value[0] = (led.value[0]*int_mix)>>8
+                led.value[1] = (led.value[1]*int_mix)>>8
+                led.value[2] = (led.value[2]*int_mix)>>8
         boop_addr = self.boop_offset
         for y in range(3,-1,-1):
             for x in range(7):
                 boop_addr &= 0x7F
                 pixel = self.boop_img[boop_addr]
-                self.disp.eye_grid[x][y].value[0] += pixel
+                self.disp.eye_grid[x][y].value[0] += pixel if self.boop_source == "local" else 0
                 self.disp.eye_grid[x][y].value[1] += pixel
-                self.disp.eye_grid[x][y].value[2] += pixel
+                self.disp.eye_grid[x][y].value[2] += pixel if self.boop_source == "local" else 0
                 boop_addr += 1
             boop_addr += 25
 
@@ -251,29 +362,56 @@ class badge(object):
     def should_prevent_boop_detection(self, current_time):
         # Detect if user is likely performing scritch gesture. If so, prevent booping.
 
-        if (self.touch.channels[0].level < 0.18 and self.touch.channels[1].level < 0.18) and \
-                (self.touch_start_time[0] and self.touch_start_time[1] and self.touch_start_time[2]) and \
-                (self.touch_start_time[0] < (current_time - 750) and self.touch_start_time[1] < (current_time - 750) and self.touch_start_time[3] < (current_time - 750)) and \
-                (self.touch_end_time[0] and self.touch_end_time[1] and self.touch_start_time[3]) and \
-                (self.touch_end_time[0] < (current_time - 300) and self.touch_end_time[1] < (current_time - 300) and self.touch_end_time[3] < (current_time - 300)):
+        if ( (not self.touch_start_time[0] and not self.touch_start_time[1] and self.touch_start_time[2] and not self.touch_start_time[3])
+            or (self.touch.channels[0].level < 0.2 and self.touch.channels[1].level < 0.2  and self.touch.channels[3].level < 0.2) and \
+                #(self.touch_start_time[0] and self.touch_start_time[1] and self.touch_start_time[2] and self.touch_start_time[3]) and \
+                ((not  self.touch_start_time[0] or self.touch_start_time[0] < (current_time - 750)) and (not self.touch_start_time[1] or self.touch_start_time[1] < (current_time - 750)) and (not  self.touch_start_time[3] or self.touch_start_time[3] < (current_time - 750))) and \
+                #(self.touch_end_time[0] and self.touch_end_time[1] and self.touch_end_time[3]) and \
+                ((not self.touch_end_time[0] or self.touch_end_time[0] < (current_time - 300)) and (not self.touch_end_time[1] or self.touch_end_time[1] < (current_time - 300)) and (not self.touch_end_time[3] or self.touch_end_time[3] < (current_time - 300)))):
+            print("should not prevent boop")
+
             return False
+    
         return True
         
     def update(self,*args):
         current_time = time.ticks_ms()
+
         self.last_boop_level = self.boop_level
         self.boop_level = self.touch.channels[2].level
-        if (self.boop_level > 0.3 and not self.should_prevent_boop_detection(current_time)):
+        if (self.boop_level > 0.3 and self.boop_count == 0 and not self.should_prevent_boop_detection(current_time)):
             if (self.last_boop_level <= 0.3):
+                self.prevent_isr_update = True
+                # Transmit LoRa packet to trigger boops on nearby badges
+                tx_boop()
+
                 self.boop_offset = 0
                 self.boop_mix    = 1.0
+                self.boop_source = "local"
 
             # Start booping
             self.boop_count = 20
+           
+        elif check_for_boop_message():
+            # Detect LoRa packet from boop on nearby badge
+            print("detected remote boop")
+            self.boop_offset = 0
+            self.boop_mix    = 1.0
+            self.boop_count = 20
+            self.boop_source = "remote"
+
         else:
+            if self.boop_ended_last_loop:
+                # Loop run after the one where boop_count reached 0
+                if not boop_rx_is_armed:
+                    arm_radio_rx()
+                self.boop_ended_last_loop = False
+        
             # Fade out the boop
             if self.boop_count > 0:
                 self.boop_count -= 1
+                if self.boop_count == 0:
+                    self.boop_ended_last_loop = True
             elif self.boop_mix > 0.0:
                     self.boop_mix -= 0.1
 
@@ -288,8 +426,12 @@ class badge(object):
         if self.scritch_mix_target > 0.0:
             self.scritch_mix = max(min(self.scritch_mix_target, 1.0) - 0.03, 0)
             self.scritch_mix_target = max(self.scritch_mix_target - 0.03, 0)
-        elif self.scritch_mix == 0:
+        
+        
+        if self.scritch_mix == 0 and self.boop_mix == 0:
             self.prevent_isr_update = False
+        else:
+            self.prevent_isr_update = True
 
         self.sw4_state <<= 1
         self.sw4_state |= self.sw4()
@@ -330,7 +472,7 @@ class badge(object):
         if (self.boop_mix > 0.0) or (self.scritch_mix > 0.0):
             backup = [rgb_value(i.value[0], i.value[1], i.value[2]) for i in self.disp.downward]
         if (self.boop_mix > 0.0):
-            self.boop(self.boop_mix)
+            self.boop(self.boop_mix, self.boop_source)
         if (self.scritch_mix > 0.0):
             self.scritch_effect(self.scritch_mix)
         self.disp.update()
@@ -352,8 +494,12 @@ class badge(object):
                 else:
                     time.sleep_ms(5)
                 self.touch_readings_update()
+
             self.update()
+
 
 global t
 t = badge()
-#t.run()
+init_radio()
+arm_radio_rx()
+t.run()
