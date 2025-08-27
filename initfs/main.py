@@ -263,9 +263,14 @@ class badge(object):
                 and not self.touch_start_time[3]
             )
             or (
-                self.touch.channels[0].level < 0.2
-                and self.touch.channels[1].level < 0.2
-                and self.touch.channels[3].level < 0.2
+                
+               self.touch.channels[2].level - max(self.touch.channels[0].level, self.touch.channels[1].level, self.touch.channels[3].level) > 0.2
+            
+            )
+            or (
+                self.touch.channels[0].level < 0.23
+                and self.touch.channels[1].level < 0.23
+                and self.touch.channels[3].level < 0.23
             )
             and (
                 (
@@ -350,7 +355,7 @@ class badge(object):
             self.scritch_mix = max(min(self.scritch_mix_target, 1.0) - 0.03, 0)
             self.scritch_mix_target = max(self.scritch_mix_target - 0.03, 0)
         
-        if self.scritch_mix == 0 and self.boop_mix == 0:
+        if self.scritch_mix == 0 and self.boop_count == 0:
             self.prevent_isr_update = False
 
         self.sw4_state <<= 1
@@ -407,7 +412,7 @@ class badge(object):
     def run(self):
         while True:
             # Run touch reading update more often than animtion update, to detect swipes/scritches better
-            for _ in range(10):
+            for _ in range(20):
                 if self.prevent_isr_update:
                     # Shorter sleep time to compensate for not having isr update
                     time.sleep_ms(1)

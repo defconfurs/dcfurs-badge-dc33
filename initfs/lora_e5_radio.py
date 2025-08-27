@@ -24,9 +24,10 @@ class LoraE5Radio():
         self.arm_radio_rx()
 
     def init_radio(self):
-        print(self.send_at("AT"))
-        print(self.send_at("AT+MODE=TEST"))
-        print(self.send_at("AT+TEST=RFCFG,903.3,SF7,125,12,15,5,ON,OFF,OFF"))
+        time.sleep_ms(300) # Seems to sometimes help when turning on after a long time of being off
+        print(self.send_at("AT", delay_ms=100))
+        print(self.send_at("AT+MODE=TEST", delay_ms=100))
+        print(self.send_at("AT+TEST=RFCFG,903.3,SF7,125,12,15,5,ON,OFF,OFF", delay_ms=100))
 
     def arm_radio_rx(self, verbose=False, delay_ms=100):
         self.rx_is_armed = True
@@ -113,7 +114,6 @@ class LoraE5Radio():
         return found_boop
 
     def tx_boop(self, msg="boop", arm_rx_after_sent=False):
-        # TX as string; receiver will report hex of the same bytes
         print(self.send_at('AT+TEST=TXLRSTR,"{}"'.format(msg), delay_ms=150))
         self.rx_is_armed = False
         if arm_rx_after_sent:
