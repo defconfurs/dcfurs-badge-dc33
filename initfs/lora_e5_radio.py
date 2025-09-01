@@ -113,8 +113,8 @@ class LoraE5Radio():
             
         return found_boop
 
-    def tx_boop(self, msg="boop", arm_rx_after_sent=False):
-        print(self.send_at('AT+TEST=TXLRSTR,"{}"'.format(msg), delay_ms=125))
+    def tx_boop(self, msg="boop", delay_ms=150, arm_rx_after_sent=False):
+        print(self.send_at('AT+TEST=TXLRSTR,"{}"'.format(msg), delay_ms=delay_ms))
         self.rx_is_armed = False
         if arm_rx_after_sent:
             time.sleep_ms(100)
