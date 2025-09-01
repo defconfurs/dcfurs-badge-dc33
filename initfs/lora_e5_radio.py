@@ -1,10 +1,11 @@
-# This file contains code for interacting with the SEEED LoRa-E5 HF module using AT commands (in AT+TEST mode)
+# This file contains code for interacting with the Seeed Studio LoRa-E5 HF module using AT commands (in AT+TEST mode)
 # This is by no means the best way of using the capabilities of the radio module, but it lets us accomplish some
 # very basic P2P functionality without needing to use a special programmer to load new firmware onto the LoRa module.
 
 # The functions in this file handle:
 # 1) initializing the radio module into AT+TEST mode and setting the receive parameters to reasonable values
-# 2)
+# 2) transmitting a "boop" message
+# 3) checking for and identifying received "boop" messages
 
 
 # NOTE: We are using power level 4 dBm here, whereas 14 dBm is the max. I had some issues where badge would come disconnected
