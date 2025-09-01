@@ -237,7 +237,7 @@ class badge(object):
 
     def isr_update(self,*args):
         if not self.prevent_isr_update:
-            schedule(self.update, self)
+            schedule(self.update, True)
 
     def touch_readings_update(self):
         self.touch.update()
@@ -302,6 +302,8 @@ class badge(object):
         return True
         
     def update(self,*args):
+        if args[0] and self.prevent_isr_update:
+            return
         current_time = time.ticks_ms()
         self.last_boop_level = self.boop_level
         self.boop_level = self.touch.channels[2].level
@@ -403,7 +405,7 @@ class badge(object):
         self.disp.update()
         if (self.boop_mix > 0.0):
             self.boop_offset += 1
-        if (self.boop_mix > 0.0) or (self.scritch_mix > 0.0):
+        if (self.boop_mix > 0.0) or (self.scritch_mix > 0.0) and backup:
             for i in range(len(backup)):
                 self.disp.downward[i].copy(backup[i])
 
@@ -419,7 +421,7 @@ class badge(object):
                 else:
                     time.sleep_ms(5)
                 self.touch_readings_update()
-            self.update()
+            self.update(False)
 
 
 global t

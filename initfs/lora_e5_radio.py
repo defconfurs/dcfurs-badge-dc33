@@ -7,9 +7,9 @@
 # 2)
 
 
-# NOTE: We are using power level 5 dBm here, whereas 14 dBm is the max. I had some issues where badge would come disconnected
+# NOTE: We are using power level 4 dBm here, whereas 14 dBm is the max. I had some issues where badge would come disconnected
 # from USB while trying to use the higher transmit power. It might work okay to use the higher power on battery though, but the
-# range seems okay with 5 dBm so for now I am leaving it.
+# range seems okay with 4 dBm so for now I am leaving it.
 from machine import Timer, Pin, UART
 import time
 
@@ -24,10 +24,10 @@ class LoraE5Radio():
         self.arm_radio_rx()
 
     def init_radio(self):
-        time.sleep_ms(300) # Seems to sometimes help when turning on after a long time of being off
+        time.sleep_ms(350) # Seems to sometimes help when turning on after a long time of being off
         print(self.send_at("AT", delay_ms=100))
         print(self.send_at("AT+MODE=TEST", delay_ms=100))
-        print(self.send_at("AT+TEST=RFCFG,903.3,SF7,125,12,15,5,ON,OFF,OFF", delay_ms=100))
+        print(self.send_at("AT+TEST=RFCFG,903.3,SF7,125,12,15,4,ON,OFF,OFF", delay_ms=100))
 
     def arm_radio_rx(self, verbose=False, delay_ms=100):
         self.rx_is_armed = True
@@ -114,7 +114,7 @@ class LoraE5Radio():
         return found_boop
 
     def tx_boop(self, msg="boop", arm_rx_after_sent=False):
-        print(self.send_at('AT+TEST=TXLRSTR,"{}"'.format(msg), delay_ms=150))
+        print(self.send_at('AT+TEST=TXLRSTR,"{}"'.format(msg), delay_ms=125))
         self.rx_is_armed = False
         if arm_rx_after_sent:
             time.sleep_ms(100)
