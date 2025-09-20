@@ -11,4 +11,4 @@ Assembly and putting up with Kay - Colin and Matt at PCBx.io.
 Soldering on battery packs - @Fujimaru_husky
 
 Additional Contributors:
-Software (minor feature: scritch) - dani.pink
+Software (basic radio stuff) - dani.pink
