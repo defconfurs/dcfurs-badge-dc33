@@ -5,7 +5,7 @@ Georges-Jaques Danton was a layer who had grown up in the outper parts of the Ch
 
 Unfortunately as the Revolution wound on, with questions of financial impropriety, and falling out of favor with the mastermind of the Great Terror, Robespierre, he was beheaded on 5 April, 1794.  His last words were to the executioner, Charles-Henri Sanson, "Show the people my head. It is well worth seeing."
 
-**Liberté, égalité, fraternité!**
+**LibertÃ©, Ã©galitÃ©, fraternitÃ©!**
 
 ## If you have issues with your badge...
 
@@ -23,7 +23,19 @@ If you want to try out the latest greatest build, you can navigate to the Action
 
 ## Updating
 
-When you load a new firmware uf2 file, it will not delete the existing micropython filesystem, so if you want updated python files, you can either copy them from this repo or delete all the files from that filesystem and hit the reset button on the badge and it will reload them.  It is recommended that you perodically backup or keep a seperate copy of the python files as you work on them, working on them directly on the badge filesystem may cause issues.
+Follow the below steps to update your badge:
+
+1. (Optional) Plug in your badge and copy the file structure from the drive that appears to your local machine as a backup
+2. Download the desired uf2 file from the releases
+3. Plug in the badge to your computer
+4. While holding the boot button, press the reset button
+5. A new drive should appear named `RPI-RP2` with an `INDEX.HTM` and `INFO_U2F.txt` file, you can release the boot button at this point
+6. Copy the uf2 file to this drive, the device should automatically reboot
+7. Once rebooted a drive will appear with python and text files
+8. Delete all files in this drive and reset the badge with the reset button
+9. When the badge reboots, the drive will re-appear with updated python and text files
+
+When you load a new firmware uf2 file, it will not delete the existing micropython filesystem. This is why step 8 is necessary. You can also copy updated python files from this repo.  It is recommended that you perodically backup or keep a seperate copy of the python files as you work on them, working on them directly on the badge filesystem may cause issues.
 
 ## PCB Information
 
